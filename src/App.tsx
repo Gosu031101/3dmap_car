@@ -2,24 +2,30 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Box } from '@react-three/drei';
+import { OrbitControls, Box, useGLTF } from '@react-three/drei';
 import './App.css';
-
-const API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with your actual API key
+// Declare google types
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY'; // Loaded from .env.local
 
 function CarModel({ speedLimit }: { speedLimit: number }) {
-  const meshRef = useRef<THREE.Mesh>(null);
+  const { scene } = useGLTF('/models/car_3d.glb');
+  const groupRef = useRef<THREE.Group>(null);
 
   useFrame(() => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += 0.01 * (speedLimit / 50);
+    if (groupRef.current) {
+      groupRef.current.rotation.y += 0.01 * (speedLimit / 50);
     }
   });
 
   return (
-    <Box ref={meshRef} args={[1, 0.5, 2]} position={[0, 0, 0]}>
-      <meshStandardMaterial color="red" />
-    </Box>
+    <group ref={groupRef}>
+      <primitive object={scene} scale={[0.01, 0.01, 0.01]} />
+    </group>
   );
 }
 
@@ -33,49 +39,61 @@ function BuildingModel({ position }: { position: [number, number, number] }) {
 
 function Map3D({ speedLimit }: { speedLimit: number }) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [map, setMap] = useState<any>(null);
 
   useEffect(() => {
+    const initMap = async () => {
+      if (mapRef.current && !map) {
+        try {
+          const { Map } = await window.google.maps.importLibrary("maps");
+          const { Marker } = await window.google.maps.importLibrary("marker");
+
+          const newMap = new Map(mapRef.current, {
+            center: { lat: 37.7749, lng: -122.4194 }, // San Francisco
+            zoom: 15,
+            mapTypeId: 'satellite',
+            tilt: 45,
+          });
+
+          // Add speed limit markers (placeholder data)
+          const speedLimitData = [
+            { lat: 37.7749, lng: -122.4194, limit: 50 },
+            { lat: 37.7750, lng: -122.4200, limit: 30 },
+            { lat: 37.7740, lng: -122.4180, limit: 60 },
+          ];
+
+          speedLimitData.forEach(data => {
+            new Marker({
+              position: { lat: data.lat, lng: data.lng },
+              map: newMap,
+              title: `Giới hạn tốc độ: ${data.limit} km/h`,
+              icon: {
+                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                  <svg width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="20" cy="20" r="18" fill="red" stroke="white" stroke-width="2"/>
+                    <text x="20" y="25" text-anchor="middle" fill="white" font-size="12" font-weight="bold">${data.limit}</text>
+                  </svg>
+                `),
+                scaledSize: new window.google.maps.Size(40, 40),
+              },
+            });
+          });
+
+          setMap(newMap);
+        } catch (error) {
+          console.error('Error loading Google Maps:', error);
+        }
+      }
+    };
+
+    // Load Google Maps
     const loader = new Loader({
       apiKey: API_KEY,
       version: 'weekly',
     });
 
-    loader.load().then(() => {
-      if (mapRef.current && !map) {
-        const newMap = new google.maps.Map(mapRef.current, {
-          center: { lat: 37.7749, lng: -122.4194 }, // San Francisco
-          zoom: 15,
-          mapTypeId: 'satellite',
-          tilt: 45,
-        });
-
-        // Add speed limit markers (placeholder data)
-        const speedLimitData = [
-          { lat: 37.7749, lng: -122.4194, limit: 50 },
-          { lat: 37.7750, lng: -122.4200, limit: 30 },
-          { lat: 37.7740, lng: -122.4180, limit: 60 },
-        ];
-
-        speedLimitData.forEach(data => {
-          const marker = new google.maps.Marker({
-            position: { lat: data.lat, lng: data.lng },
-            map: newMap,
-            title: `Giới hạn tốc độ: ${data.limit} km/h`,
-            icon: {
-              url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                <svg width="40" height="40" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="20" cy="20" r="18" fill="red" stroke="white" stroke-width="2"/>
-                  <text x="20" y="25" text-anchor="middle" fill="white" font-size="12" font-weight="bold">${data.limit}</text>
-                </svg>
-              `),
-              scaledSize: new google.maps.Size(40, 40),
-            },
-          });
-        });
-
-        setMap(newMap);
-      }
+    (loader as any).load().then(() => {
+      initMap();
     });
   }, [map]);
 
@@ -91,6 +109,11 @@ function Map3D({ speedLimit }: { speedLimit: number }) {
         <CarModel speedLimit={speedLimit} />
         <BuildingModel position={[2, 0, 0]} />
         <BuildingModel position={[-2, 0, 0]} />
+
+        {/* Thêm GLB models khác nếu có */}
+        {/* <GLBModel url="/models/building.glb" position={[3, 0, 0]} scale={[0.1, 0.1, 0.1]} /> */}
+        {/* <GLBModel url="/models/tree.glb" position={[-3, 0, 2]} scale={[0.02, 0.02, 0.02]} /> */}
+
         <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
       </Canvas>
     </div>
@@ -117,7 +140,7 @@ function App() {
   const enableGPS = () => {
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(
-        (position) => {
+        () => {
           // Simulate speed calculation (in real app, use position.timestamp differences)
           const simulatedSpeed = Math.floor(Math.random() * 80) + 20; // Random speed for demo
           setCurrentSpeed(simulatedSpeed);
