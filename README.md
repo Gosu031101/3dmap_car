@@ -1,6 +1,6 @@
 # 3D Car Map Application
 
-Ứng dụng bản đồ 3D dành riêng cho ô tô với đồ họa 3D của xe và các tòa nhà dựa trên dữ liệu từ Google Maps.
+Ứng dụng bản đồ 3D dành riêng cho ô tô với đồ họa 3D của xe và các tòa nhà dựa trên dữ liệu từ OpenStreetMap.
 
 ## Cài đặt
 
@@ -9,21 +9,17 @@
    npm install
    ```
 
-2. **API Key Google Maps:**
-   - Tạo file `.env.local` trong thư mục gốc
-   - Thêm dòng: `VITE_GOOGLE_MAPS_API_KEY=your_api_key_here`
-   - API key đã được cấu hình sẵn trong `.env.local`
-
-3. Chạy ứng dụng:
+2. Chạy ứng dụng:
    ```bash
    npm run dev
    ```
 
-Ứng dụng sẽ chạy trên http://localhost:5173/
-
+Ứng dụng sẽ chạy trên http://localhost:5174/
+Vị trí mặc định: **Thành phố Hồ Chí Minh, Việt Nam**
 ## Tính năng
 
-- Bản đồ Google Maps với chế độ vệ tinh
+- Bản đồ OpenStreetMap với định vị vị trí hiện tại tự động
+- Nút định vị (📍) ở góc dưới bên phải để định vị lại vị trí hiện tại
 - **Mô hình 3D xe từ file GLB** (`car_3d.glb`)
 - Các tòa nhà 3D (placeholder)
 - Tích hợp Three.js cho render 3D

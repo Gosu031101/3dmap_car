@@ -5,9 +5,11 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: '0.0.0.0',
+    host: true,
+    allowedHosts: true,
     port: 5173,
   },
+  
   build: {
     target: ['es2015', 'chrome64', 'firefox78', 'safari12', 'edge79'],
     cssTarget: ['chrome64', 'firefox78', 'safari12', 'edge79'],
