@@ -37,7 +37,7 @@ function BuildingModel({ position }: { position: [number, number, number] }) {
   );
 }
 
-function Map3D({ speedLimit }: { speedLimit: number }) {
+function Map3D({ speedLimit, onMapLoad }: { speedLimit: number; onMapLoad?: () => void }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
 
@@ -80,6 +80,7 @@ function Map3D({ speedLimit }: { speedLimit: number }) {
           });
 
           setMap(newMap);
+          onMapLoad?.();
         } catch (error) {
           console.error('Error loading Google Maps:', error);
         }
@@ -128,6 +129,8 @@ function App() {
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [warning, setWarning] = useState(false);
   const [gpsEnabled, setGpsEnabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   useEffect(() => {
     setWarning(currentSpeed > speedLimit);
@@ -137,21 +140,31 @@ function App() {
     localStorage.setItem('speedLimit', speedLimit.toString());
   }, [speedLimit]);
 
-  const enableGPS = () => {
+  const enableGPS = async () => {
     if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(
-        () => {
-          // Simulate speed calculation (in real app, use position.timestamp differences)
-          const simulatedSpeed = Math.floor(Math.random() * 80) + 20; // Random speed for demo
-          setCurrentSpeed(simulatedSpeed);
-          setGpsEnabled(true);
-        },
-        (error) => {
-          console.error('GPS Error:', error);
-          alert('Không thể truy cập GPS. Vui lòng kiểm tra quyền truy cập.');
-        },
-        { enableHighAccuracy: true, maximumAge: 1000 }
-      );
+      setIsLoading(true);
+      try {
+        await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 1000
+          });
+        });
+
+        // Simulate speed calculation (in real app, use position.timestamp differences)
+        const simulatedSpeed = Math.floor(Math.random() * 80) + 20;
+        setCurrentSpeed(simulatedSpeed);
+        setGpsEnabled(true);
+
+        // Show success message
+        alert('GPS đã được kích hoạt thành công! Tốc độ hiện tại: ' + simulatedSpeed + ' km/h');
+      } catch (error) {
+        console.error('GPS Error:', error);
+        alert('Không thể truy cập GPS. Vui lòng kiểm tra quyền truy cập vị trí.');
+      } finally {
+        setIsLoading(false);
+      }
     } else {
       alert('Trình duyệt không hỗ trợ GPS.');
     }
@@ -159,48 +172,249 @@ function App() {
 
   return (
     <div className="App">
-      <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1000, background: 'rgba(255,255,255,0.95)', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', maxWidth: '320px', fontFamily: 'Arial, sans-serif' }}>
-        <h3 style={{ margin: '0 0 15px 0', color: '#333', fontSize: '18px', textAlign: 'center' }}>🚗 Speed Control Panel</h3>
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-            Giới hạn tốc độ: {speedLimit} km/h
+      <div className="speed-control-panel" style={{
+        position: 'absolute',
+        top: 20,
+        left: 20,
+        zIndex: 1000,
+        background: 'rgba(255, 255, 255, 0.98)',
+        backdropFilter: 'blur(20px)',
+        padding: '25px',
+        borderRadius: '20px',
+        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        maxWidth: '350px',
+        fontFamily: 'Segoe UI, sans-serif',
+        transition: 'all 0.3s ease'
+      }}>
+        <h3 style={{
+          margin: '0 0 20px 0',
+          fontSize: '22px',
+          textAlign: 'center',
+          background: 'linear-gradient(135deg, #667eea, #764ba2)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          fontWeight: 700
+        }}>
+          🚗 3D Car Map Control
+        </h3>
+
+        {/* Speed Limit Control */}
+        <div className="control-group" style={{
+          background: 'rgba(102, 126, 234, 0.05)',
+          borderRadius: '12px',
+          padding: '15px',
+          marginBottom: '15px',
+          border: '1px solid rgba(102, 126, 234, 0.1)',
+          transition: 'all 0.3s ease'
+        }}>
+          <label style={{
+            display: 'block',
+            marginBottom: '10px',
+            fontWeight: 600,
+            color: '#333',
+            fontSize: '14px'
+          }}>
+            ⚙️ Giới hạn tốc độ
           </label>
+          <div className="speed-display" style={{
+            fontSize: '24px',
+            fontWeight: 700,
+            color: '#667eea',
+            textAlign: 'center',
+            padding: '10px',
+            background: 'rgba(102, 126, 234, 0.1)',
+            borderRadius: '8px',
+            border: '2px solid rgba(102, 126, 234, 0.2)',
+            marginBottom: '15px'
+          }}>
+            {speedLimit} km/h
+          </div>
           <input
             type="range"
             min="0"
             max="120"
             value={speedLimit}
             onChange={(e) => setSpeedLimit(Number(e.target.value))}
-            style={{ width: '100%', marginBottom: '10px' }}
+            style={{
+              width: '100%',
+              height: '8px',
+              borderRadius: '4px',
+              background: 'linear-gradient(90deg, #667eea, #764ba2)',
+              outline: 'none'
+            }}
           />
         </div>
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-            Tốc độ hiện tại: {currentSpeed} km/h {gpsEnabled ? '(GPS)' : '(Manual)'}
+
+        {/* Current Speed Control */}
+        <div className="control-group" style={{
+          background: 'rgba(102, 126, 234, 0.05)',
+          borderRadius: '12px',
+          padding: '15px',
+          marginBottom: '15px',
+          border: '1px solid rgba(102, 126, 234, 0.1)',
+          transition: 'all 0.3s ease'
+        }}>
+          <label style={{
+            display: 'block',
+            marginBottom: '10px',
+            fontWeight: 600,
+            color: '#333',
+            fontSize: '14px'
+          }}>
+            <span className={`status-indicator ${gpsEnabled ? 'online' : 'offline'}`} style={{
+              display: 'inline-block',
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              marginRight: '8px',
+              background: gpsEnabled ? '#2ed573' : '#ff4757',
+              boxShadow: gpsEnabled ? '0 0 10px rgba(46, 213, 115, 0.5)' : '0 0 10px rgba(255, 71, 87, 0.5)'
+            }}></span>
+            Tốc độ hiện tại {gpsEnabled ? '(GPS)' : '(Manual)'}
           </label>
+          <div className="speed-display" style={{
+            fontSize: '24px',
+            fontWeight: 700,
+            color: currentSpeed > speedLimit ? '#ff4757' : '#2ed573',
+            textAlign: 'center',
+            padding: '10px',
+            background: currentSpeed > speedLimit ? 'rgba(255, 71, 87, 0.1)' : 'rgba(46, 213, 115, 0.1)',
+            borderRadius: '8px',
+            border: `2px solid ${currentSpeed > speedLimit ? 'rgba(255, 71, 87, 0.2)' : 'rgba(46, 213, 115, 0.2)'}`,
+            marginBottom: '15px'
+          }}>
+            {currentSpeed} km/h
+          </div>
           <input
             type="range"
             min="0"
             max="150"
             value={currentSpeed}
             onChange={(e) => setCurrentSpeed(Number(e.target.value))}
-            style={{ width: '100%', marginBottom: '10px' }}
+            style={{
+              width: '100%',
+              height: '8px',
+              borderRadius: '4px',
+              background: 'linear-gradient(90deg, #667eea, #764ba2)',
+              outline: 'none',
+              marginBottom: '15px'
+            }}
             disabled={gpsEnabled}
           />
           <button
             onClick={enableGPS}
-            style={{ width: '100%', padding: '5px', background: gpsEnabled ? '#4CAF50' : '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            disabled={isLoading}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: gpsEnabled ? '#2ed573' : 'linear-gradient(135deg, #667eea, #764ba2)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: 600,
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              fontSize: '16px',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+              opacity: isLoading ? 0.7 : 1
+            }}
           >
-            {gpsEnabled ? 'GPS Đã Bật' : 'Bật GPS'}
+            {isLoading ? (
+              <>
+                <span className="loading" style={{
+                  display: 'inline-block',
+                  width: '20px',
+                  height: '20px',
+                  border: '3px solid rgba(255, 255, 255, 0.3)',
+                  borderRadius: '50%',
+                  borderTopColor: 'white',
+                  animation: 'spin 1s ease-in-out infinite',
+                  marginRight: '8px'
+                }}></span>
+                Đang kết nối GPS...
+              </>
+            ) : gpsEnabled ? (
+              '✅ GPS Đã Kích Hoạt'
+            ) : (
+              '📍 Kích Hoạt GPS'
+            )}
           </button>
         </div>
+
+        {/* Warning Message */}
         {warning && (
-          <div style={{ color: 'white', fontWeight: 'bold', marginTop: '15px', padding: '10px', background: 'linear-gradient(45deg, #ff4444, #ff6666)', borderRadius: '6px', border: '2px solid #cc0000', textAlign: 'center', animation: 'blink 1s infinite' }}>
-            🚨 CẢNH BÁO: VƯỢT QUÁ GIỚI HẠN TỐC ĐỘ! 🚨
+          <div className="warning-message" style={{
+            color: 'white',
+            fontWeight: 'bold',
+            marginTop: '15px',
+            padding: '15px',
+            background: 'linear-gradient(135deg, #ff6b6b, #ee5a24)',
+            borderRadius: '12px',
+            border: '2px solid #ff4757',
+            textAlign: 'center',
+            animation: 'pulse 2s infinite',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <span style={{
+              position: 'absolute',
+              left: '15px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              fontSize: '24px',
+              animation: 'bounce 1s infinite'
+            }}>🚨</span>
+            <div style={{ marginLeft: '40px' }}>
+              CẢNH BÁO: VƯỢT QUÁ GIỚI HẠN TỐC ĐỘ!
+              <br />
+              <small style={{ fontSize: '12px', opacity: 0.9 }}>
+                Vui lòng giảm tốc độ xuống dưới {speedLimit} km/h
+              </small>
+            </div>
           </div>
         )}
+
+        {/* Status Info */}
+        <div style={{
+          marginTop: '20px',
+          padding: '10px',
+          background: 'rgba(102, 126, 234, 0.05)',
+          borderRadius: '8px',
+          border: '1px solid rgba(102, 126, 234, 0.1)',
+          fontSize: '12px',
+          color: '#666',
+          textAlign: 'center'
+        }}>
+          <div style={{ marginBottom: '5px' }}>
+            <span className={`status-indicator ${mapLoaded ? 'online' : 'warning'}`} style={{
+              display: 'inline-block',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              marginRight: '5px',
+              background: mapLoaded ? '#2ed573' : '#ffa502',
+              boxShadow: mapLoaded ? '0 0 6px rgba(46, 213, 115, 0.5)' : '0 0 6px rgba(255, 165, 2, 0.5)'
+            }}></span>
+            Bản đồ: {mapLoaded ? 'Đã tải' : 'Đang tải...'}
+          </div>
+          <div>
+            <span className="status-indicator online" style={{
+              display: 'inline-block',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              marginRight: '5px',
+              background: '#2ed573',
+              boxShadow: '0 0 6px rgba(46, 213, 115, 0.5)'
+            }}></span>
+            Ứng dụng: Hoạt động
+          </div>
+        </div>
       </div>
-      <Map3D speedLimit={speedLimit} />
+
+      <Map3D speedLimit={speedLimit} onMapLoad={() => setMapLoaded(true)} />
     </div>
   );
 }

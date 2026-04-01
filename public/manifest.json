@@ -1,0 +1,20 @@
+{
+  "name": "3D Car Map",
+  "short_name": "CarMap3D",
+  "description": "Ứng dụng bản đồ 3D dành riêng cho ô tô với đồ họa 3D",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2196F3",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["navigation", "maps"],
+  "lang": "vi-VN",
+  "dir": "ltr"
+}

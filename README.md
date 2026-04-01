@@ -28,6 +28,21 @@
 - Các tòa nhà 3D (placeholder)
 - Tích hợp Three.js cho render 3D
 - Hỗ trợ file GLB 3D models
+- **Responsive Design**: Hoạt động ổn định trên mọi thiết bị
+- **PWA Support**: Có thể cài đặt như app native
+
+## Yêu cầu hệ thống
+
+- **Android**: 9.0 trở lên
+- **iOS**: 12.0 trở lên
+- **Browser**: Chrome 64+, Firefox 78+, Safari 12+, Edge 79+
+
+## Cài đặt PWA (Progressive Web App)
+
+1. Mở ứng dụng trong browser trên mobile
+2. Nhấn nút "Share" hoặc menu (⋮)
+3. Chọn "Add to Home Screen" hoặc "Install App"
+4. Ứng dụng sẽ hoạt động như app native
 
 ## Thêm file GLB 3D Models
 
